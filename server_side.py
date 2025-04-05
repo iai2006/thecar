@@ -42,7 +42,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     motor_right.forward()
                 elif data == "backward":
                     motor_left.backward()
-                                motor_right.backward()
+                    motor_right.backward()
                 elif data == "left":
                     motor_left.backward()
                     motor_right.forward()
