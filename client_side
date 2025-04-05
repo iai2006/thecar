@@ -1,0 +1,62 @@
+import tkinter as tk
+import socket
+import json
+import logging
+
+# Настройка логирования
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Настройка сокета
+HOST = '192.168.8.112'  # IP-адрес Raspberry Pi
+PORT = 65432
+
+def send_command(command):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+        s.sendall(command.encode('utf-8'))
+        logging.debug(f"Sent command: {command}")
+        if command == "get_temp":
+            data = s.recv(1024).decode('utf-8')
+            logging.debug(f"Received data: {data}")
+            try:
+                response = json.loads(data)
+                if response["command"] == "temp":
+                    temp_label.config(text=f"CPU Temperature: {response['value']} °C")
+                    logging.info(f"Updated temperature label to: {response['value']} °C")
+                else:
+                    temp_label.config(text="Failed to get temperature")
+                    logging.warning("Failed to get temperature")
+            except json.JSONDecodeError:
+                temp_label.config(text="Invalid response from server")
+                logging.error(f"Invalid JSON response: {data}")
+
+def update_temperature():
+    send_command("get_temp")
+    root.after(5000, update_temperature)  # Обновление каждые 5 секунд
+
+# Создание окна
+root = tk.Tk()
+root.title("Robot Control")
+
+# Кнопки управления
+btn_forward = tk.Button(root, text="Forward", command=lambda: send_command("forward"))
+btn_backward = tk.Button(root, text="Backward", command=lambda: send_command("backward"))
+btn_left = tk.Button(root, text="Left", command=lambda: send_command("left"))
+btn_right = tk.Button(root, text="Right", command=lambda: send_command("right"))
+btn_stop = tk.Button(root, text="Stop", command=lambda: send_command("stop"))
+
+# Метка для температуры
+temp_label = tk.Label(root, text="CPU Temperature: Unknown °C", font=("Helvetica", 12))
+
+# Размещение кнопок и метки
+btn_forward.pack(side=tk.TOP, fill=tk.X)
+btn_backward.pack(side=tk.TOP, fill=tk.X)
+btn_left.pack(side=tk.LEFT, fill=tk.Y)
+btn_right.pack(side=tk.RIGHT, fill=tk.Y)
+btn_stop.pack(side=tk.BOTTOM, fill=tk.X)
+temp_label.pack(side=tk.BOTTOM, pady=10)
+
+# Запуск обновления температуры
+update_temperature()
+
+root.mainloop()
